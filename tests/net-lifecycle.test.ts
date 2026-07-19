@@ -55,7 +55,7 @@ vi.mock('trystero', () => ({
   },
 }));
 
-const { createNet, netStats, resetNetStats } = await import('../src/engine/net');
+const { createNet, netStats, resetNetStats } = await import('@ben-gy/game-engine/net');
 
 const APP = 'scrapwall-lifecycle';
 
@@ -152,13 +152,20 @@ describe('createNet — channel fan-out', () => {
     await net.leave();
   });
 
-  it('keeps the rematch protocol on exactly three reserved names', () => {
-    // net.channel() fans out, so a game channel colliding with 'rv'/'rs'/'rq'
+  it('keeps the rematch protocol on exactly four reserved names', () => {
+    // net.channel() fans out, so a game channel colliding with a rematch name
     // would feed every message to both subsystems. Scrapwall's own channels are
-    // 'snap' and 'act'; assert the engine still reserves exactly its three.
-    const src = readFileSync('src/engine/rematch.ts', 'utf8');
+    // 'snap' and 'act'; assert the engine still reserves exactly its own set.
+    //
+    // Engine v1.1.0 added a fourth, 'rk': the host re-broadcasts the start until
+    // every present peer acknowledges it, which is what stops a peer whose data
+    // channel opened a beat late from being silently left out of the round.
+    const src = readFileSync(
+      'node_modules/@ben-gy/game-engine/src/rematch.ts',
+      'utf8',
+    );
     const reserved = [...src.matchAll(/net\.channel<[^>]*>\(\s*'([^']+)'/g)].map((m) => m[1]);
-    expect(reserved.sort()).toEqual(['rq', 'rs', 'rv']);
+    expect(reserved.sort()).toEqual(['rk', 'rq', 'rs', 'rv']);
     for (const c of reserved) expect(c.length).toBeLessThanOrEqual(12);
   });
 });

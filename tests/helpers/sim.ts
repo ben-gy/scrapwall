@@ -14,7 +14,7 @@
 
 import { Game, type Seat } from '../../src/game';
 import { botAct } from '../../src/bot';
-import { makeRng, type Rng } from '../../src/engine/rng';
+import { makeRng, type Rng } from '@ben-gy/game-engine/rng';
 import type { Mode } from '../../src/modes';
 
 export interface RunResult {
