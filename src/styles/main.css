@@ -130,7 +130,15 @@ button { font: inherit; color: inherit; }
 .re-head, .lobby-head { text-align: center; }
 .re-title, .lobby-title { font-size: 1.5rem; }
 .re-sub, .lobby-sub { color: var(--dim); font-size: 0.88rem; margin: 4px 0 0; }
-.lobby-code { color: var(--amber); letter-spacing: 0.15em; font-weight: 900; }
+/* mobile.css turns selection off page-wide so dragging on the grid never
+   highlights text. The room code is the one string a player needs to copy by
+   hand, so opt it back in here. (The vendored lobby used to do this by tagging
+   the element `.selectable`; the engine's lobby has no such hook, and this is
+   a styling decision that belongs to the game anyway.) */
+.lobby-code {
+  color: var(--amber); letter-spacing: 0.15em; font-weight: 900;
+  user-select: text; -webkit-user-select: text; -webkit-touch-callout: default;
+}
 .lobby-btn {
   appearance: none; border: 1px solid var(--line); background: var(--panel2); color: var(--text);
   padding: 13px 16px; border-radius: 12px; font-weight: 700; cursor: pointer; min-height: 48px;

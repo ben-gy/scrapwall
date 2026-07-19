@@ -15,7 +15,7 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Net } from '../src/engine/net';
+import type { Net } from '@ben-gy/game-engine/net';
 
 interface Wire {
   peers: Map<string, Room>;
@@ -91,7 +91,7 @@ async function peer(id: string, opts: { claimHost?: boolean } = {}): Promise<Net
       return room;
     },
   }));
-  const mod = await import('../src/engine/net');
+  const mod = await import('@ben-gy/game-engine/net');
   return mod.createNet({ appId: 'scrapwall', roomId: 'R', claimHost: opts.claimHost });
 }
 
@@ -152,7 +152,11 @@ describe('host election — nobody hosts a mesh that has not formed', () => {
     const a = await peer('a');
     const b = await peer('b');
     connect('a', 'b');
-    vi.advanceTimersByTime(2600);
+    // SETTLE_MS went 2.5s -> 6s in engine v1.1.0. The old window was barely
+    // longer than one 2s announce interval, so a joiner could time out and
+    // self-elect while the incumbent's announce was still in flight — that is
+    // the join that stole a live room. Three announce intervals is the point.
+    vi.advanceTimersByTime(6100);
     expect(a.isHost()).toBe(true);
     expect(b.isHost()).toBe(false);
     expect(b.host()).toBe('a');

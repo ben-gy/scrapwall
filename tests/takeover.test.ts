@@ -21,7 +21,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { createSession, type SessionSeat } from '../src/net-game';
 import { Game, type Seat, WAVE_LEAD } from '../src/game';
 import { MODES } from '../src/modes';
-import type { Net, PeerId } from '../src/engine/net';
+import type { Net, PeerId } from '@ben-gy/game-engine/net';
 
 function silentNet(selfId: PeerId, host: PeerId | null, sent?: Record<string, unknown[]>): Net {
   return {
@@ -39,6 +39,23 @@ function silentNet(selfId: PeerId, host: PeerId | null, sent?: Record<string, un
       return send;
     },
     ping: async () => 0,
+    // createSession only ever reads host/isHost/channel, but the Net contract
+    // grew in engine v1.1.0 and a double that lies about its shape stops being
+    // a test of the real thing. These are the honest no-op answers for a peer
+    // that has no mesh: a fixed term, a roster that never changes, and a
+    // takeover that has nobody to announce to.
+    hostEpoch: () => (host === null ? 0 : 1),
+    onPeersChange: () => () => {},
+    takeover: () => {},
+    netDiag: () => ({
+      selfId,
+      host,
+      epoch: host === null ? 0 : 1,
+      settled: host !== null,
+      peers: [selfId],
+      relaySockets: {},
+      turn: false,
+    }),
     leave: async () => {},
   };
 }

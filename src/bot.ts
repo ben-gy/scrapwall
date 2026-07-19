@@ -17,7 +17,7 @@
  */
 
 import { Game, STRUCTS, TURRET, WALL, SPIKES, CORE, type BuildKind } from './game';
-import type { Rng } from './engine/rng';
+import type { Rng } from '@ben-gy/game-engine/rng';
 
 function countType(g: Game, type: number): number {
   let c = 0;

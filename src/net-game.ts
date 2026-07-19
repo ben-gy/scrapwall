@@ -24,7 +24,7 @@
  */
 
 import { Game, type GEvent, type CellType, EMPTY, CORE, WALL, TURRET, SPIKES, type BuildKind } from './game';
-import type { Net, PeerId } from './engine/net';
+import type { Net, PeerId } from '@ben-gy/game-engine/net';
 
 /** Host -> all: the whole fort + horde, small enough to send at 10Hz. */
 interface Snap {

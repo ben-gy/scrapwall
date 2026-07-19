@@ -32,23 +32,41 @@ import {
   shareText,
   type MatchTally,
 } from './results';
-import { createStore } from './engine/storage';
-import { createNet, type Net } from './engine/net';
-import { createRounds, type Rounds } from './engine/rematch';
-import { resolveName, withName } from './engine/identity';
-import { hardenViewport } from './engine/mobile';
+import { createStore } from '@ben-gy/game-engine/storage';
+import { createNet, roomAppId, setTurnConfig, type Net } from '@ben-gy/game-engine/net';
+import { getTurnConfig } from '@ben-gy/game-engine/turn';
+import { createRounds, type Rounds } from '@ben-gy/game-engine/rematch';
+import { resolveName, withName } from '@ben-gy/game-engine/identity';
+import { hardenViewport } from '@ben-gy/game-engine/mobile';
 import {
   createLobby,
   createRoomEntry,
   normalizeRoomCode,
   clearRoomInUrl,
   setRoomInUrl,
-} from './engine/lobby';
-import { newSeed } from './engine/rng';
+} from '@ben-gy/game-engine/lobby';
+import { newSeed } from '@ben-gy/game-engine/rng';
 
 hardenViewport();
 
-const store = createStore('scrapwall');
+const SLUG = 'scrapwall';
+
+/**
+ * ICE servers for every mesh on this page, fetched once at boot.
+ *
+ * Trystero builds ONE global RTCPeerConnection pool from the config of the
+ * FIRST joinRoom on the page, so `setTurnConfig` has to have landed before any
+ * mesh exists — a call made later leaves the initiating half of every pair
+ * STUN-only, and STUN alone cannot punch through carrier-grade NAT. That was
+ * the "we're in the same room but nobody appears" report.
+ *
+ * Kicked off here rather than inside enterRoom so the fetch overlaps the menu,
+ * and awaited at the one place a mesh is created. getTurnConfig is
+ * session-cached and fails open to `[]`, so this can never block a join.
+ */
+const turnReady: Promise<void> = getTurnConfig().then(setTurnConfig);
+
+const store = createStore(SLUG);
 const app = document.querySelector<HTMLDivElement>('#app')!;
 
 const CREW = ['Rust', 'Vale', 'Cinder', 'Bolt', 'Ash', 'Wren', 'Nix', 'Fen'];
@@ -82,6 +100,15 @@ let roomCode = '';
 let mode: Mode = modeOf(store.get('mode', DEFAULT_MODE.id));
 let deepLinkUsed = false;
 let tool: ToolId = 'wall';
+
+/**
+ * Bumped by every teardownRoom(). Joining is now asynchronous (it waits on the
+ * TURN fetch), so an enterRoom that gets superseded mid-await — a double submit,
+ * or a bounce back to the menu while the fetch is in flight — must drop its join
+ * instead of creating a second live mesh behind the current screen. ONE ROOM PER
+ * SESSION is the rule this protects.
+ */
+let roomGen = 0;
 
 const el = (html: string): HTMLElement => {
   const d = document.createElement('div');
@@ -237,19 +264,29 @@ function showRoomEntry(): void {
   shell('<div class="screen" id="entry"></div>');
   createRoomEntry({
     container: app.querySelector<HTMLElement>('#entry')!,
-    onSubmit: (code, created) => enterRoom(normalizeRoomCode(code), created),
+    onSubmit: (code, created) => void enterRoom(normalizeRoomCode(code), created),
     onCancel: showMenu,
     subtitle: `Start a room and share the code, or type a friend's. Up to ${MAX_PLAYERS} defenders.`,
   });
 }
 
-function enterRoom(code: string, created: boolean): void {
+async function enterRoom(code: string, created: boolean): Promise<void> {
   teardownRoom();
+  const gen = roomGen;
   roomCode = code;
   setRoomInUrl(code);
 
+  // The one mesh this game creates, so this is the one place TURN has to be in
+  // hand. Almost always already resolved (the fetch started at boot and is
+  // session-cached); worst case it is a 3s timeout that resolves to STUN-only.
+  await turnReady;
+  if (gen !== roomGen) return; // superseded while we waited — do not join
+
   net = createNet(
-    { appId: 'scrapwall', roomId: code, claimHost: created },
+    // roomAppId stamps the protocol revision into the appId, so a peer still
+    // running the pre-v1.1.0 build lands in a different room instead of
+    // half-speaking the new start protocol inside this one.
+    { appId: roomAppId(SLUG), roomId: code, claimHost: created },
     {
       onHostChange: (_id, isSelfHost) => {
         session?.setHost(isSelfHost);
@@ -886,6 +923,7 @@ async function share(text: string): Promise<void> {
 // ── teardown ────────────────────────────────────────────────────────────────
 
 function teardownRoom(): void {
+  roomGen++;
   cleanupGame?.();
   cleanupGame = null;
   cleanupLobby?.();
@@ -915,8 +953,17 @@ const deep = url.searchParams.get('room');
 if (deep && !deepLinkUsed) {
   deepLinkUsed = true;
   const code = normalizeRoomCode(deep);
-  if (code.length >= 3) enterRoom(code, false);
-  else showMenu();
+  if (code.length >= 3) {
+    // The lobby only paints once the mesh exists, and creating it now waits on
+    // the TURN fetch. Without this the invite-link arrival stares at an empty
+    // page for that gap.
+    shell(
+      `<div class="screen"><div class="lobby-searching">
+         <span class="spinner" aria-hidden="true"></span><span>Joining room ${esc(code)}…</span>
+       </div></div>`,
+    );
+    void enterRoom(code, false);
+  } else showMenu();
 } else {
   showMenu();
 }

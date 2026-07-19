@@ -13,7 +13,7 @@
  * the host is reproducible and a promoted peer inherits an identical world.
  */
 
-import { makeRng, randInt, type Rng } from './engine/rng';
+import { makeRng, randInt, type Rng } from '@ben-gy/game-engine/rng';
 import type { Mode } from './modes';
 import { tuning } from './tuning';
 
