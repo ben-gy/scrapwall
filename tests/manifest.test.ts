@@ -7,7 +7,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { inflateSync } from 'node:zlib';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -168,10 +168,14 @@ describe('the anti-zoom contract', () => {
 
 describe('no debug noise ships', () => {
   it('src has no console.log / console.error', () => {
-    const files = [
-      'src/main.ts', 'src/game.ts', 'src/net-game.ts', 'src/render.ts', 'src/bot.ts',
-      'src/fx.ts', 'src/sound.ts', 'src/results.ts', 'src/modes.ts', 'src/tuning.ts', 'src/countdown.ts',
-    ];
+    // Enumerated from disk rather than hand-listed: the hand-written list went
+    // red when src/sound.ts was deleted (the engine now takes game patches), and
+    // — worse — it would silently stop covering any NEW file nobody remembered
+    // to add. A list of files to check should be "the files".
+    const files = readdirSync('src')
+      .filter((f) => f.endsWith('.ts'))
+      .map((f) => `src/${f}`);
+    expect(files.length).toBeGreaterThan(5);
     for (const f of files) {
       expect(read(f), `${f} has a console call`).not.toMatch(/console\.(log|error|warn|debug)\s*\(/);
     }

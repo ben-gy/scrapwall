@@ -156,7 +156,7 @@ export function createRenderer(canvas: HTMLCanvasElement): Renderer {
         const cy = y + cell / 2;
         const frac = g.cmax[i] > 0 ? g.chp[i] / g.cmax[i] : 1;
         if (t === WALL) {
-          ctx.fillStyle = frac > 0.4 ? PALETTE.steel : '#3a2b2b';
+          ctx.fillStyle = frac > 0.4 ? PALETTE.steel : PALETTE.steelLow;
           roundRect(x + cell * 0.1, y + cell * 0.1, cell * 0.8, cell * 0.8, cell * 0.14);
           ctx.fill();
           ctx.fillStyle = 'rgba(255,255,255,0.06)';

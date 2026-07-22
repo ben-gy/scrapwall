@@ -22,7 +22,8 @@ import { MODE_LIST, MAX_PLAYERS, modeOf, DEFAULT_MODE, type Mode } from './modes
 import { createSession, type Session, type SessionSeat } from './net-game';
 import { createRenderer } from './render';
 import { createFx, seatColor, huskColor, PALETTE } from './fx';
-import { createSfx, type SfxName } from './sound';
+import { createSfx, type SfxName } from '@ben-gy/game-engine/sound';
+import { CUES } from './cues';
 import { startCountdown, type Countdown } from './countdown';
 import {
   summarize,
@@ -71,7 +72,7 @@ const app = document.querySelector<HTMLDivElement>('#app')!;
 
 const CREW = ['Rust', 'Vale', 'Cinder', 'Bolt', 'Ash', 'Wren', 'Nix', 'Fen'];
 
-const sfx = createSfx(store.get('muted', false));
+const sfx = createSfx({ muted: store.get('muted', false), patches: CUES });
 let myName = resolveName(store, () => CREW[0]);
 
 type ToolId = 'wall' | 'turret' | 'spikes' | 'fix' | 'clear';

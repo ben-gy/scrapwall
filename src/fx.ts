@@ -8,10 +8,19 @@
  * `prefers-reduced-motion`.
  */
 
+/**
+ * Anything that sits ON the board must clear 3:1 contrast against `grid` — the
+ * WCAG 2.1 floor for a meaningful non-text graphic, and the difference between a
+ * wall you can see and one you cannot. `steel` used to be #243244, which is 1.14:1
+ * against the grid: the walls rendered, and were invisible. They read as empty
+ * cells, so the fort looked see-through. contrast.test.ts pins every one of these.
+ */
 export const PALETTE = {
   night: '#0b1220',
   panel: '#111c2e',
-  steel: '#243244',
+  steel: '#677892',
+  /** A wall/turret below 40% hp — rust, and still legible rather than near-black. */
+  steelLow: '#b06a55',
   grid: '#1b2740',
   amber: '#f0b429',
   hot: '#ff8c42',

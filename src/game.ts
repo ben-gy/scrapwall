@@ -556,13 +556,29 @@ export class Game {
       }
       const tx = this.colOf(i) + 0.5;
       const ty = this.rowOf(i) + 0.5;
-      // nearest husk in range
+      // Pick the most URGENT husk in range, NOT the one closest to this gun.
+      //
+      // Husks stack: the flow-field funnels a whole column into one cell and
+      // nothing pushes them apart, so three of them sit within a jitter's width
+      // of each other. Under "nearest to me" every gun in the battery locks the
+      // same husk — whichever is a hair closer — and the ones directly behind it
+      // are never ANY gun's nearest, so they chew the Core at full HP while the
+      // whole fort shoots past them. Measured: a husk sat inside turret range,
+      // with ammo in the bank, taking zero fire for 8 seconds.
+      //
+      // Threat is how deep into the fort a husk has got, so target by distance to
+      // the Core: whatever is closest to killing us is always engaged, and no
+      // husk can hide behind the one in front of it. A wounded husk breaks the
+      // tie so the battery finishes one off instead of spreading damage thin.
+      const r2 = TURRET_RANGE * TURRET_RANGE;
       let target: Husk | null = null;
-      let bestD = TURRET_RANGE * TURRET_RANGE;
+      let bestCore = Infinity;
       for (const h of this.husks) {
         const d = (h.x - tx) * (h.x - tx) + (h.y - ty) * (h.y - ty);
-        if (d < bestD) {
-          bestD = d;
+        if (d > r2) continue;
+        const core = (h.x - this.cx) * (h.x - this.cx) + (h.y - this.cy) * (h.y - this.cy);
+        if (core < bestCore || (core === bestCore && target !== null && h.hp < target.hp)) {
+          bestCore = core;
           target = h;
         }
       }

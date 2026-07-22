@@ -1,5 +1,5 @@
 /**
- * balance.test.ts — is the difficulty curve actually a curve?
+ * balance.test.ts — is the difficulty curve actually a curve, and do the guns work?
  *
  * Scrapwall is co-op, so it has no seat-fairness or snowball problem — the risk it
  * DOES have is the one the idea named: the wave ramp. Two ways it dies, and both
@@ -17,6 +17,15 @@
  * takes Core damage a wave or two earlier — but they are a CONSISTENT one, and the
  * point is the SHAPE of the curve, not the absolute wave. Every draw is seeded, so
  * these numbers are deterministic: a bound that moves, moved for a reason.
+ *
+ * THE THIRD WAY IT DIES, added after a player reported it in a shipped build: a
+ * defensive MECHANISM is silently broken while the curve still looks perfect. The
+ * guns targeted the husk nearest to each gun, so husks stacked in one cell hid
+ * behind each other and hammered the Core untouched — measured at 8 seconds of
+ * free hits. Every assertion below stayed green, because losing a wave early to
+ * broken guns and losing a wave early to a hard wave are the same number. An
+ * outcome sim cannot tell those apart, so it must also assert MECHANISM: see
+ * "the guns engage the horde" below, and `misTargetedShots` in helpers/sim.ts.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -76,6 +85,22 @@ describe('the ramp resolves — no immortal fort, every run ends', () => {
       expect(contested, 'expected a wave held by some runs but not all').toBe(true);
     }
   });
+});
+
+describe('the guns engage the horde — the mechanism, not just the outcome', () => {
+  for (const [name, c] of ALL.map((c, i) => [['Depot1', 'Depot2', 'Depot4', 'Outpost2', 'Sprawl2'][i], c] as const)) {
+    it(`${name}: no gun ever shoots past a husk closer to the Core`, () => {
+      // Zero tolerance, and it earns it: the shipped build scored 7,600–16,300
+      // violations per config here, and the fix scores 0. Every other assertion
+      // in this file was green for both.
+      expect(
+        c.misTargetedShots,
+        'a turret fired at one husk while a husk CLOSER TO THE CORE stood in the ' +
+          'same turret\'s range — that is how a husk hides behind another and ' +
+          'kills the Core untouched',
+      ).toBe(0);
+    });
+  }
 });
 
 describe('the party is playable at every size — no pathological seat', () => {
